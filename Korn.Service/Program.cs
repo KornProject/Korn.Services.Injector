@@ -1,0 +1,1 @@
+﻿File.WriteAllText(@"C:\a.txt", "test");
