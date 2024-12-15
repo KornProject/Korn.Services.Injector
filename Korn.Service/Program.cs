@@ -1,31 +1,55 @@
-﻿using Korn.Utils.System;
+﻿using Korn.Utils;
+using Korn.Utils.VisualStudio;
 using System.Diagnostics;
-using System.Management;
 
-var startWatch = new ManagementEventWatcher(
-      new WqlEventQuery("SELECT * FROM Win32_ProcessStartTrace"));
-startWatch.EventArrived += startWatch_EventArrived;
-startWatch.Start();
+#if DEBUG
+var bootstrapperDirectory = @"C:\Data\programming\vs projects\korn\Korn.Bootstrapper\Korn.Bootstrapper\bin\Debug\netcoreapp3.1";
+#else
+const string KORN_PATH_VAR_NAME = "KORN_PATH";
 
-Thread.Sleep(TimeSpan.MaxValue);
+var kornDirectory = SystemVariablesUtils.GetVariable(KORN_PATH_VAR_NAME)!;
+var bootstrapperDirectory = Path.Combine(kornDirectory, "Bootsrapper", "bin");
+#endif
 
-void startWatch_EventArrived(object sender, EventArrivedEventArgs e)
+var visualStudioPath = VSWhere.ResolveVisualStudioPath();
+
+using var processCollection = new ProcessCollection();
+using var processWatcher = new ProcessWatcher(processCollection);
+using var devenvWatcher = new DevenvWatcher(processWatcher);
+
+devenvWatcher.ProcessStarted += OnProcessStarted;
+
+#if RELEASE
+processCollection.InitializeExistedProcessesWithTimeOrder();
+#endif
+
+Thread.Sleep(int.MaxValue);
+
+void OnProcessStarted(HashedProcess hashedProcess)
 {
-    var properties = e.NewEvent.Properties;
-    var name = (string)properties["ProcessName"].Value;
-    var id = (int)(uint)properties["ProcessID"].Value;
+    var process = hashedProcess.Process;
 
-    var a = DateTime.Now.Ticks;
-    Console.WriteLine("Process started: {0}", name);
-    if (name == "ConsoleTest.exe")
+    using var processManager = new ExternalProcessManager(process);
+    processManager.SuspendProcess();
+
+    var isBootstrapperInjected = process.Modules.Cast<ProcessModule>().Any(m => m.FileName.EndsWith("Korn.Bootstrapper.dll"));
+    if (!isBootstrapperInjected)
     {
-        var process = Process.GetProcessById(id);
-        using var processManager = new ExternalProcessManager(process);
+        if (hashedProcess.Name == "devenv")
+        {
+            Console.WriteLine($"Injecting in \"{hashedProcess.Name}\" process with pid {hashedProcess.ID}");
 
-        processManager.SuspendProcess();
+            using var injector = new Injector(process);
 
-        _ = 3;
+            injector.Inject(
+                assemblyPath: Path.Combine(bootstrapperDirectory, "Korn.Bootstrapper.dll"),
+                configPath: Path.Combine(bootstrapperDirectory, "Korn.Bootstrapper.runtimeconfig.json"),
+                assemblyName: "Korn.Bootstrapper",
+                classFullName: "Program",
+                methodName: "ExternalMain"
+            );
+        }
     }
 
-    _ = 3;
+    processManager.ResumeProcess();
 }
