@@ -51,6 +51,9 @@ class DevenvWatcher : IDisposable
             if (!IsDevenvProcess(name, id, parentID, nameHash))
                 return;
 
+            if (!ActiveProcesses.ContainsKey(id))
+                return;
+
             hashedProcess = ActiveProcesses[id];
             ActiveProcesses.Remove(id);
         }

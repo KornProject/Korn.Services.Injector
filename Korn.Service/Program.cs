@@ -1,14 +1,31 @@
-﻿using Korn.Utils;
+﻿#define DEV
+
+using Korn.AssemblyInjector;
+using Korn.Utils;
 using Korn.Utils.VisualStudio;
 using System.Diagnostics;
 
-#if DEBUG
-var bootstrapperDirectory = @"C:\Data\programming\vs projects\korn\Korn.Bootstrapper\Korn.Bootstrapper\bin\Debug\netcoreapp3.1";
-#else
-const string KORN_PATH_VAR_NAME = "KORN_PATH";
+int[] net8ProcessHashes = 
+[
+    "ServiceHub.IntellicodeModelService".GetHashCode(),
+    "ServiceHub.Host.dotnet.x64".GetHashCode(),
+    "ServiceHub.RoslynCodeAnalysisService".GetHashCode(),
+    "ServiceHub.ThreadedWaitDialog".GetHashCode(),
+    "ServiceHub.IdentityHost".GetHashCode(),
+    "ServiceHub.VSDetouredHost".GetHashCode(),
+    "Microsoft.ServiceHub.Controller".GetHashCode(),
+    "MSBuild".GetHashCode(), // …
+];
 
-var kornDirectory = SystemVariablesUtils.GetVariable(KORN_PATH_VAR_NAME)!;
-var bootstrapperDirectory = Path.Combine(kornDirectory, "Bootsrapper", "bin");
+int[] netframework472ProcessHashes = [
+    "devenv".GetHashCode()
+];
+
+#if DEV
+var bootstrapperExecutable = @"C:\Data\programming\vs projects\korn\Korn.Bootstrapper\Korn.Bootstrapper\bin\x64\Debug\net8.0-windows\Korn.Bootstrapper.dll";
+#else
+var kornDirectory = SystemVariablesUtils.GetKornPath()!;
+var bootstrapperExecutable = Path.Combine(kornDirectory, "Bootsrapper", "bin", "Korn.Bootstrapper.dll");
 #endif
 
 var visualStudioPath = VSWhere.ResolveVisualStudioPath();
@@ -19,7 +36,7 @@ using var devenvWatcher = new DevenvWatcher(processWatcher);
 
 devenvWatcher.ProcessStarted += OnProcessStarted;
 
-#if RELEASE
+#if !DEV
 processCollection.InitializeExistedProcessesWithTimeOrder();
 #endif
 
@@ -32,22 +49,20 @@ void OnProcessStarted(HashedProcess hashedProcess)
     using var processManager = new ExternalProcessManager(process);
     processManager.SuspendProcess();
 
-    var isBootstrapperInjected = process.Modules.Cast<ProcessModule>().Any(m => m.FileName.EndsWith("Korn.Bootstrapper.dll"));
+    var processModules = process.Modules.Cast<ProcessModule>().ToArray();
+    var isBootstrapperInjected = processModules.Any(m => Path.GetFileName(m.FileName) is "Korn.Bootstrapper.dll" or "Korn.Bootstrapper.netframework.dll");
     if (!isBootstrapperInjected)
     {
-        if (hashedProcess.Name == "devenv")
+        var isNet8 = net8ProcessHashes.Contains(hashedProcess.NameHash);
+
+        if (isNet8)
         {
             Console.WriteLine($"Injecting in \"{hashedProcess.Name}\" process with pid {hashedProcess.ID}");
 
-            using var injector = new Injector(process);
+            using var injector = new UnsafeInjector(hashedProcess.Process);
 
-            injector.Inject(
-                assemblyPath: Path.Combine(bootstrapperDirectory, "Korn.Bootstrapper.dll"),
-                configPath: Path.Combine(bootstrapperDirectory, "Korn.Bootstrapper.runtimeconfig.json"),
-                assemblyName: "Korn.Bootstrapper",
-                classFullName: "Program",
-                methodName: "ExternalMain"
-            );
+            if (injector.IsCoreClr)
+                injector.InjectInCoreClr(bootstrapperExecutable);
         }
     }
 
