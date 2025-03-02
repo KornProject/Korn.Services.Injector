@@ -15,7 +15,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Korn.AssemblyInjector\Korn.AssemblyInjector\Korn.AssemblyInjector.csproj" />
+    <ProjectReference Include="..\..\Korn.Interface\Korn.Interface\Korn.Interface.csproj" />
     <ProjectReference Include="..\..\Korn.Logger\Korn.Logger\Korn.Logger.csproj" />
+    <ProjectReference Include="..\..\Korn.Shared.Internal\Korn.Shared.Internal\Korn.Shared.Internal.csproj" />
+    <ProjectReference Include="..\..\Korn.Utils.PDBResolver\Korn.Utils.PDBResolver\Korn.Utils.PDBResolver.csproj" />
     <ProjectReference Include="..\..\Korn.Utils.System\Korn.Utils.System\Korn.Utils.System.csproj" />
     <ProjectReference Include="..\..\Korn.Utils.VisualStudio\Korn.Utils.VisualStudio\Korn.Utils.VisualStudio.csproj" />
   </ItemGroup>

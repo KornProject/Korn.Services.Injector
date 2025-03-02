@@ -21,13 +21,6 @@ int[] netframework472ProcessHashes = [
     "devenv".GetHashCode()
 ];
 
-#if DEV
-var bootstrapperExecutable = @"C:\Data\programming\vs projects\korn\Korn.Bootstrapper\Korn.Bootstrapper\bin\x64\Debug\net8.0-windows\Korn.Bootstrapper.dll";
-#else
-var kornDirectory = SystemVariablesUtils.GetKornPath()!;
-var bootstrapperExecutable = Path.Combine(kornDirectory, "Bootsrapper", "bin", "Korn.Bootstrapper.dll");
-#endif
-
 var visualStudioPath = VSWhere.ResolveVisualStudioPath();
 
 using var processCollection = new ProcessCollection();
@@ -44,26 +37,26 @@ Thread.Sleep(int.MaxValue);
 
 void OnProcessStarted(HashedProcess hashedProcess)
 {
+    const string dllname = "Korn.Bootstrapper.dll";
     var process = hashedProcess.Process;
 
     using var processManager = new ExternalProcessManager(process);
     processManager.SuspendProcess();
 
     var processModules = process.Modules.Cast<ProcessModule>().ToArray();
-    var isBootstrapperInjected = processModules.Any(m => Path.GetFileName(m.FileName) is "Korn.Bootstrapper.dll" or "Korn.Bootstrapper.netframework.dll");
+    var isBootstrapperInjected = processModules.Any(m => Path.GetFileName(m.FileName) is dllname);
     if (!isBootstrapperInjected)
     {
         var isNet8 = net8ProcessHashes.Contains(hashedProcess.NameHash);
 
-        if (isNet8)
-        {
-            Console.WriteLine($"Injecting in \"{hashedProcess.Name}\" process with pid {hashedProcess.ID}");
+        Console.WriteLine($"Injecting in \"{hashedProcess.Name}\" process with pid {hashedProcess.ID}");
 
-            using var injector = new UnsafeInjector(hashedProcess.Process);
+        using var injector = new UnsafeInjector(hashedProcess.Process);
 
-            if (injector.IsCoreClr)
-                injector.InjectInCoreClr(bootstrapperExecutable);
-        }
+        if (isNet8 && injector.IsCoreClr)
+            injector.InjectInCoreClr(Path.Combine(Korn.Interface.Bootstrapper.BinNet8Directory, dllname));
+        else if (!isNet8 && injector.IsClr)
+            injector.InjectInClr(Path.Combine(Korn.Interface.Bootstrapper.BinNet472Directory, dllname));
     }
 
     processManager.ResumeProcess();
