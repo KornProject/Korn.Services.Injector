@@ -1,63 +1,40 @@
-﻿using Korn;
-using Korn.Utils;
+﻿using Korn.Utils;
+using Korn.Utils.Algorithms;
+using Korn.Utils.Memory;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 #pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
-delegate void ProcessDelegate(string Name, int PID, int ParentPID, int NameHash);
+unsafe delegate void ProcessDelegate(ProcessEntry* entry);
+
+public unsafe struct ProcessEntry
+{
+    public ProcessEntry(int id, int parentId, string name, int hash)
+    {
+        (ID, ParentID, Name, Hash) = (id, parentId, name, hash);
+    }
+
+    public int ID;
+    public int ParentID;
+    public string Name;
+    public int Hash;
+}
 
 unsafe class ProcessCollection : IDisposable
 {
-    public ProcessCollection() => InitializeCollections();
+    const int MAX_PROCESSES = 2048;
 
-    #region Events
+    public ProcessCollection()
+    {
+        States = new StateCollection(MAX_PROCESSES);
+        Entries = MemoryEx.Alloc<ProcessEntry>(MAX_PROCESSES);
+    }
+
     public event ProcessDelegate? ProcessStarted;
     public event ProcessDelegate? ProcessStopped;
-    #endregion
 
-    #region Initialize
-    const int MAX_PROCESSES = 2048;
-    const int ENTRY_SIZE = sizeof(long) * 8;
-    const int ENTRY_HALF_SIZE = ENTRY_SIZE / 2;
-    const int MAX_ENTRY_STATES = MAX_PROCESSES / ENTRY_SIZE;
-    long* entriesStates;
-    int* processIDs;
-    int* processParentIDs;
-    string* processNames;
-    int* processHashes;
-
-    int NextFreeIndex;
-    int MaxIndexOfProcess;
-    readonly object locker = new();
-
-    void DisposeCollections()
-    {
-        if (entriesStates is not null)
-            MemoryUtils.Free(entriesStates);
-
-        if (processIDs is not null)
-            MemoryUtils.Free(processIDs);
-
-        if (processIDs is not null)
-            MemoryUtils.Free(processParentIDs);
-
-        if (processHashes is not null)
-            MemoryUtils.Free(processHashes);
-
-        if (processNames is not null)
-            MemoryUtils.Free(processNames);
-    }
-
-    void InitializeCollections()
-    {
-        DisposeCollections();
-
-        entriesStates = MemoryUtils.Alloc<long>(MAX_ENTRY_STATES);
-        processIDs = MemoryUtils.Alloc<int>(MAX_PROCESSES);
-        processParentIDs = MemoryUtils.Alloc<int>(MAX_PROCESSES);
-        processHashes = MemoryUtils.Alloc<int>(MAX_PROCESSES);
-        processNames = (string*)MemoryUtils.Alloc<nint>(MAX_PROCESSES);
-    }
+    StateCollection States;
+    ProcessEntry* Entries;
 
     public void InitializeExistedProcessesWithTimeOrder()
         => InitializeExistedProcesses(process => process.Id == 0 ? 0 : (int)new TimeSpan(process.StartTime.Ticks).TotalMilliseconds);
@@ -84,170 +61,64 @@ unsafe class ProcessCollection : IDisposable
                 or "csrss" or "lsass" or "smss" or "services" or "taskeng" or "taskhost" or "dwm"  or "sihost" or "Secure System" or "Registry")
                 continue;
             
-            AddProcess(index, process);
+            AddProcess(process);
         }
     }
-    #endregion
 
-    #region AddProcess
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void AddProcess(Process process)
+    void AddProcess(ProcessEntry entry)
     {
-        var id = process.Id;
-        var name = process.ProcessName;
-        var parentID = process.GetParentProcessID();
-        var hash = HashedProcess.GetProcessNameHash(name);
-
-        AddProcess(id, parentID, name, hash);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    void AddProcess(int index, Process process)
-    {
-        var id = process.Id;
-        var name = process.ProcessName;
-        var parentId = process.GetParentProcessID();
-        var hash = HashedProcess.GetProcessNameHash(name);
-
-        AddProcess(index, id, parentId, name, hash);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void AddProcess(int id, int parentID, string name, int hash) => AddProcess(FindFreeEntryIndex(), id, parentID, name, hash);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void AddProcess(int id, int parentID, string name) => AddProcess(FindFreeEntryIndex(), id, parentID, name, HashedProcess.GetProcessNameHash(name));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void AddProcess(int id, string name) => AddProcess(FindFreeEntryIndex(), id, ProcessUtils.GetParentProcessID(id), name, HashedProcess.GetProcessNameHash(name));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    void AddProcess(int index, int id, int parentID, string name, int hash)
-    {
-        SetProcessEntryAtIndex(index, id, parentID, name, hash);
-
-        if (index > MaxIndexOfProcess)
-            MaxIndexOfProcess = index;
-
-        ProcessStarted?.Invoke(name, id, parentID, hash);
-    }
-    #endregion
-
-    #region SetProcessEntryAtIndex
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    void SetProcessEntryAtIndex(int index, int id, int parentID, string name, int hash)
-    {
-        lock (locker)
+        lock (this)
         {
-            entriesStates[index / ENTRY_SIZE] |= 1L << (index % ENTRY_SIZE);
-            processIDs[index] = id;
-            processParentIDs[index] = parentID;
-            processHashes[index] = hash;
-            processNames[index] = name;
+            var index = States.HoldEntry();
+            Entries[index] = entry;
+            ProcessStarted?.Invoke(Entries + index);
         }
     }
-    #endregion
 
-    #region RemoveProcess
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void RemoveProcess(Process process) => RemoveProcess(process.ProcessName);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] public void AddProcess(int id, int parentID, string name, int hash) => AddProcess(new ProcessEntry(id, parentID, name, hash));
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] public void AddProcess(int id, int parentID, string name) => AddProcess(id, parentID, name, HashedProcess.GetProcessNameHash(name));
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] public void AddProcess(int id, string name) => AddProcess(id, ProcessUtils.GetParentProcessID(id), name);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] public void AddProcess(Process process) => AddProcess(process.Id, process.ProcessName);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void RemoveProcessByID(int id) => RemoveProcess(FindProcessEntryIndexByID(id));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    void RemoveProcess(string name) => RemoveProcess(FindProcessEntryIndex(name));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void RemoveProcess(int index)
     {
-        lock (locker)
-            entriesStates[index / ENTRY_SIZE] &= ~(1L << (index % ENTRY_SIZE));
+        if (index == -1)
+            return;
 
-        if (ProcessStopped is not null)
+        lock (this)
         {
-            var name = processNames[index];
-            var id = processIDs[index];
-            var parentID = processParentIDs[index];
-            var hash = processHashes[index];
-
-            ProcessStopped.Invoke(name, id, parentID, hash);
+            States.FreeEntry(index);
+            ProcessStopped?.Invoke(Entries + index);
         }
     }
-    #endregion
 
-    #region FindProcessEntryIndex
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    int FindProcessEntryIndex(Process process) => FindProcessEntryIndexByID(process.Id);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] public void RemoveProcess(Process process) => RemoveProcessByID(process.Id);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] public void RemoveProcessByID(int id) => RemoveProcess(FindProcessEntryIndexByID(id));
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] public void RemoveProcess(string name) => RemoveProcess(FindProcessEntryIndex(name));
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] int FindProcessEntryIndex(Process process) => FindProcessEntryIndexByID(process.Id);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     int FindProcessEntryIndexByID(int id)
     {
-        var to = MaxIndexOfProcess + 1;
+        var to = States.TopHoldedIndex + 1;
         for (int index = 0; index < to; index++)
-            if (processIDs[index] == id)
+            if ((Entries + index)->ID == id)
                 return index;
 
         return -1;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    int FindProcessEntryIndex(string name) => FindProcessEntryIndexByHash(HashedProcess.GetProcessNameHash(name));
-
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] int FindProcessEntryIndex(string name) => FindProcessEntryIndexByHash(HashedProcess.GetProcessNameHash(name));
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     int FindProcessEntryIndexByHash(int hash)
     {
-        var to = MaxIndexOfProcess + 1;
+        var to = States.TopHoldedIndex + 1;
         for (int index = 0; index < to; index++)
-            if (processHashes[index] == hash)
+            if ((Entries + index)->Hash == hash)
                 return index;
 
         return -1;
     }
-
-    int FindFreeEntryIndex()
-    {
-        if (NextFreeIndex != -1)
-        {
-            var index = NextFreeIndex;
-            NextFreeIndex = -1;
-            return index;
-        }
-
-        for (var entryIndex = 0; entryIndex < MAX_ENTRY_STATES; entryIndex++)
-        {
-            var entryState = entriesStates[entryIndex];
-            if ((ulong)entryState != 0xFFFFFFFFFFFFFFFF)
-            {
-                var lowerState = (int)(entryState & 0xFFFFFFFF);
-                if ((uint)lowerState != 0xFFFFFFFF)
-                {
-                    for (int bitIndex = 0; bitIndex < 32; bitIndex++)
-                    {
-                        var state = (lowerState & (1 << bitIndex)) != 0;
-
-                        if (!state)
-                            return entryIndex * ENTRY_SIZE + bitIndex;
-                    }
-                }
-
-                var highState = (int)((entryState >> 32) & 0xFFFFFFFF);
-                if ((uint)highState != 0xFFFFFFFF)
-                {
-                    for (int bitIndex = 0; bitIndex < 32; bitIndex++)
-                    {
-                        var state = (lowerState & (1 << bitIndex)) != 0;
-
-                        if (!state)
-                            return entryIndex * ENTRY_SIZE + ENTRY_HALF_SIZE + bitIndex;
-                    }
-                }
-            }
-        }
-
-        throw new KornException("ProcessCollection->FindFreeEntryIndex: Critical error: no free space for a new process entry");
-    }
-    #endregion
 
     #region IDisposable
     bool disposed;
@@ -257,7 +128,8 @@ unsafe class ProcessCollection : IDisposable
             return;
         disposed = true;
 
-        DisposeCollections();
+        States.Dispose();
+        MemoryEx.Free(Entries);
     }
 
     ~ProcessCollection() => Dispose();

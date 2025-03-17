@@ -1,27 +1,35 @@
 ﻿#define DEV
 
 using Korn.AssemblyInjector;
+using Korn.Shared;
 using Korn.Utils;
-using Korn.Utils.VisualStudio;
 using System.Diagnostics;
 
-int[] net8ProcessHashes = 
+DeveloperTools.SetLocalLibraries();
+KornShared.Logger.WriteMessage($"Service({Process.GetCurrentProcess().Id}) started");
+
+var net8ProcessHashes =
+((string[])
 [
-    "ServiceHub.IntellicodeModelService".GetHashCode(),
-    "ServiceHub.Host.dotnet.x64".GetHashCode(),
-    "ServiceHub.RoslynCodeAnalysisService".GetHashCode(),
-    "ServiceHub.ThreadedWaitDialog".GetHashCode(),
-    "ServiceHub.IdentityHost".GetHashCode(),
-    "ServiceHub.VSDetouredHost".GetHashCode(),
-    "Microsoft.ServiceHub.Controller".GetHashCode(),
-    "MSBuild".GetHashCode(), // …
-];
+    //"ServiceHub.Host.dotnet.x64",
+    "ServiceHub.RoslynCodeAnalysisService",
+    //"ServiceHub.ThreadedWaitDialog",
+    //"ServiceHub.IdentityHost",
+    //"ServiceHub.VSDetouredHost",
+    //"Microsoft.ServiceHub.Controller"
+]).Select(name => name.GetHashCode()).ToArray();
 
-int[] netframework472ProcessHashes = [
-    "devenv".GetHashCode()
-];
+int[] net472ProcessHashes =
+((string[])
+[
+    //"ServiceHub.IntellicodeModelService", // unused
+    "devenv",
+    //"MSBuild", // not used
+    "VBCSCompiler"
+]).Select(name => name.GetHashCode()).ToArray();
 
-var visualStudioPath = VSWhere.ResolveVisualStudioPath();
+((string[])["MSBuild", "VBCSCompiler"]).ToList().ForEach(name => Process.GetProcessesByName(name).ToList().ForEach(p => p.Kill()));
+;
 
 using var processCollection = new ProcessCollection();
 using var processWatcher = new ProcessWatcher(processCollection);
@@ -37,27 +45,49 @@ Thread.Sleep(int.MaxValue);
 
 void OnProcessStarted(HashedProcess hashedProcess)
 {
-    const string dllname = "Korn.Bootstrapper.dll";
-    var process = hashedProcess.Process;
-
-    using var processManager = new ExternalProcessManager(process);
-    processManager.SuspendProcess();
-
-    var processModules = process.Modules.Cast<ProcessModule>().ToArray();
-    var isBootstrapperInjected = processModules.Any(m => Path.GetFileName(m.FileName) is dllname);
-    if (!isBootstrapperInjected)
+    try
     {
-        var isNet8 = net8ProcessHashes.Contains(hashedProcess.NameHash);
+        var entry = hashedProcess.Entry;
+        //if (entry.Name != "ServiceHub.RoslynCodeAnalysisService")
+        //    return;
 
-        Console.WriteLine($"Injecting in \"{hashedProcess.Name}\" process with pid {hashedProcess.ID}");
+        const string dllname = "Korn.Bootstrapper.dll";
 
-        using var injector = new UnsafeInjector(hashedProcess.Process);
+        var process = hashedProcess.Process;
+        var processModules = process.Modules.Cast<ProcessModule>().ToArray();
+        var isBootstrapperInjected = processModules.Any(m => Path.GetFileName(m.FileName) is dllname);
+        if (isBootstrapperInjected)
+            return;
 
-        if (isNet8 && injector.IsCoreClr)
-            injector.InjectInCoreClr(Path.Combine(Korn.Interface.Bootstrapper.BinNet8Directory, dllname));
-        else if (!isNet8 && injector.IsClr)
-            injector.InjectInClr(Path.Combine(Korn.Interface.Bootstrapper.BinNet472Directory, dllname));
+        var isNet8 = net8ProcessHashes.Contains(entry.Hash);
+        var isNet472 = net472ProcessHashes.Contains(entry.Hash);
+
+        if (isNet8 || isNet472)
+        {
+            Console.WriteLine($"Injecting in \"{entry.Name}\"({entry.ID})");
+            process.Exited += (s, e) => Console.WriteLine($"{process.ProcessName}({entry.ID}) exited with code {process.ExitCode}"); // doesn't work by some reason
+            
+            Console.WriteLine("Write smth");
+            Console.ReadLine();
+
+            /*
+            if (entry.Name == "VBCSCompiler")
+            {
+                Console.WriteLine("Write smth");
+                Console.ReadLine();
+            }
+            */
+
+            using var injector = new UnsafeInjector(hashedProcess.Process);
+
+            if (isNet8 && injector.IsCoreClr)
+                injector.InjectInCoreClr(Path.Combine(Korn.Interface.Bootstrapper.BinNet8Directory, dllname));
+            else if (isNet472 && injector.IsClr)
+                injector.InjectInClr(Path.Combine(Korn.Interface.Bootstrapper.BinNet472Directory, dllname));
+        }
     }
-
-    processManager.ResumeProcess();
+    catch (Exception ex) 
+    {
+        Console.WriteLine(ex);
+    }    
 }

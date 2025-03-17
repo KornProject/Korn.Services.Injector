@@ -25,6 +25,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Interface", "..\Korn.I
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Shared.Internal", "..\Korn.Shared.Internal\Korn.Shared.Internal\Korn.Shared.Internal.csproj", "{7080E782-0C75-414C-85E1-7606DECE3245}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Utils.Memory", "..\Korn.Utils.Memory\Korn.Utils.Memory\Korn.Utils.Memory.csproj", "{8DA1363B-46E1-48AD-9C32-BF747E754BEF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Utils.Algorithms", "..\Korn.Utils.Algorithms\Korn.Utils.Algorithms\Korn.Utils.Algorithms.csproj", "{8FFB060D-4515-4CBF-BA16-AE1A5EA379F4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -113,6 +117,22 @@ Global
 		{7080E782-0C75-414C-85E1-7606DECE3245}.Release|Any CPU.Build.0 = Release|x64
 		{7080E782-0C75-414C-85E1-7606DECE3245}.Release|x64.ActiveCfg = Release|x64
 		{7080E782-0C75-414C-85E1-7606DECE3245}.Release|x64.Build.0 = Release|x64
+		{8DA1363B-46E1-48AD-9C32-BF747E754BEF}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{8DA1363B-46E1-48AD-9C32-BF747E754BEF}.Debug|Any CPU.Build.0 = Debug|x64
+		{8DA1363B-46E1-48AD-9C32-BF747E754BEF}.Debug|x64.ActiveCfg = Debug|x64
+		{8DA1363B-46E1-48AD-9C32-BF747E754BEF}.Debug|x64.Build.0 = Debug|x64
+		{8DA1363B-46E1-48AD-9C32-BF747E754BEF}.Release|Any CPU.ActiveCfg = Release|x64
+		{8DA1363B-46E1-48AD-9C32-BF747E754BEF}.Release|Any CPU.Build.0 = Release|x64
+		{8DA1363B-46E1-48AD-9C32-BF747E754BEF}.Release|x64.ActiveCfg = Release|x64
+		{8DA1363B-46E1-48AD-9C32-BF747E754BEF}.Release|x64.Build.0 = Release|x64
+		{8FFB060D-4515-4CBF-BA16-AE1A5EA379F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8FFB060D-4515-4CBF-BA16-AE1A5EA379F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8FFB060D-4515-4CBF-BA16-AE1A5EA379F4}.Debug|x64.ActiveCfg = Debug|x64
+		{8FFB060D-4515-4CBF-BA16-AE1A5EA379F4}.Debug|x64.Build.0 = Debug|x64
+		{8FFB060D-4515-4CBF-BA16-AE1A5EA379F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8FFB060D-4515-4CBF-BA16-AE1A5EA379F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8FFB060D-4515-4CBF-BA16-AE1A5EA379F4}.Release|x64.ActiveCfg = Release|x64
+		{8FFB060D-4515-4CBF-BA16-AE1A5EA379F4}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -127,5 +147,7 @@ Global
 		{8FFB086B-A90E-4B8E-B046-4448091707E9} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
 		{D585BE26-D8EE-494A-922E-BEEBF8DAB683} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
 		{7080E782-0C75-414C-85E1-7606DECE3245} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
+		{8DA1363B-46E1-48AD-9C32-BF747E754BEF} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
+		{8FFB060D-4515-4CBF-BA16-AE1A5EA379F4} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
 	EndGlobalSection
 EndGlobal
