@@ -1,6 +1,7 @@
-﻿using System.Management;
+﻿using Korn.Utils;
+using System.Management;
 
-class ProcessWatcher : IDisposable
+unsafe class ProcessWatcher : IDisposable
 {
     public ProcessWatcher() : this(new ProcessCollection()) { }
 
@@ -8,28 +9,34 @@ class ProcessWatcher : IDisposable
     {
         ProcessCollection = processCollection;
 
-        processStartWatcher = new ManagementEventWatcher(new WqlEventQuery("SELECT * FROM Win32_ProcessStartTrace"));
-        processStartWatcher.EventArrived += OnProcessStarted;
+        processCreation = new ManagementEventWatcher("SELECT * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_Process'");
+        processCreation.EventArrived += OnProcessCreation;
 
-        processStopWatcher = new ManagementEventWatcher(new WqlEventQuery("SELECT * FROM Win32_ProcessStopTrace"));
+        processStopWatcher = new ManagementEventWatcher("SELECT * FROM Win32_ProcessStopTrace");
         processStopWatcher.EventArrived += OnProcessStopped;
 
         StartWatchers();
     }
 
-    ManagementEventWatcher processStartWatcher;
+    ManagementEventWatcher processCreation;
     ManagementEventWatcher processStopWatcher;
 
     public readonly ProcessCollection ProcessCollection;
 
-    void OnProcessStarted(object sender, EventArrivedEventArgs e)
+    void OnProcessCreation(object sender, EventArrivedEventArgs e)
     {
-        var properties = e.NewEvent.Properties;
-        var name = (string)properties["ProcessName"].Value;
-        var id = (int)(uint)properties["ProcessID"].Value;
-        var parentID = (int)(uint)properties["ParentProcessID"].Value;
+        Console.WriteLine($"c: {Kernel32.GetSystemTime() / 10000}");
 
-        name = Path.GetFileNameWithoutExtension(name);
+        var eventProperties = e.NewEvent.Properties;
+
+        var instance = (ManagementBaseObject)eventProperties["TargetInstance"].Value;
+        var instanceProperties = instance.Properties;
+
+        var name = (string)instanceProperties["Description"].Value;
+        var id = (int)(uint)instanceProperties["ProcessID"].Value;
+        var parentID = (int)(uint)instanceProperties["ParentProcessID"].Value;
+
+        name = name.Substring(0, name.Length - 4);
 
         ProcessCollection.AddProcess(id, parentID, name);
     }
@@ -41,23 +48,24 @@ class ProcessWatcher : IDisposable
         var id = (int)(uint)properties["ProcessID"].Value;
         var parentID = (int)(uint)properties["ParentProcessID"].Value;
 
-        name = Path.GetFileNameWithoutExtension(name);
+        name = name.Substring(0, name.Length - 4);
 
         ProcessCollection.RemoveProcessByID(id);
     }
 
     void StartWatchers()
     {
-        processStartWatcher.Start();
+        processCreation.Start();
         processStopWatcher.Start();
     }
 
     void StopWatchers()
     {
-        processStartWatcher.Stop();
+        processCreation.Stop();
         processStopWatcher.Stop();
     }
 
+    #region IDisposable
     bool disposed;
     public void Dispose()
     {
@@ -67,9 +75,10 @@ class ProcessWatcher : IDisposable
 
         StopWatchers();
 
-        processStartWatcher.Dispose();
+        processCreation.Dispose();
         processStopWatcher.Dispose();
     }
 
     ~ProcessWatcher() => Dispose();
+    #endregion
 }

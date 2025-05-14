@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Core", "..\Korn.Core\K
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Utils.Assembler", "..\Korn.Utils.Assembler\Korn.Utils.Assembler\Korn.Utils.Assembler.csproj", "{8D03DF18-35AE-44B4-8E9C-BEDEDC2ACC9B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Utils.Unsafe", "..\Korn.Utils.Unsafe\Korn.Utils.Unsafe\Korn.Utils.Unsafe.csproj", "{1C15958D-4775-4ACF-B674-6B1A4CB3C951}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -50,6 +52,8 @@ Global
 		{A381BAEA-8FC4-42C9-8431-34118D619FE0}.Debug|x64.Build.0 = Debug|x64
 		{8D03DF18-35AE-44B4-8E9C-BEDEDC2ACC9B}.Debug|x64.ActiveCfg = Debug|x64
 		{8D03DF18-35AE-44B4-8E9C-BEDEDC2ACC9B}.Debug|x64.Build.0 = Debug|x64
+		{1C15958D-4775-4ACF-B674-6B1A4CB3C951}.Debug|x64.ActiveCfg = Debug|x64
+		{1C15958D-4775-4ACF-B674-6B1A4CB3C951}.Debug|x64.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -64,5 +68,6 @@ Global
 		{8FFB060D-4515-4CBF-BA16-AE1A5EA379F4} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
 		{A381BAEA-8FC4-42C9-8431-34118D619FE0} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
 		{8D03DF18-35AE-44B4-8E9C-BEDEDC2ACC9B} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
+		{1C15958D-4775-4ACF-B674-6B1A4CB3C951} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
 	EndGlobalSection
 EndGlobal

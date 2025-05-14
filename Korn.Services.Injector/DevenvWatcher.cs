@@ -1,7 +1,7 @@
 ﻿using Korn.Utils;
 
 #pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
-delegate void DevenvProcessDelegate(HashedProcess Process);
+delegate void DevenvProcessDelegate(ProcessEntry Process);
 
 unsafe class DevenvWatcher : IDisposable
 {
@@ -18,53 +18,38 @@ unsafe class DevenvWatcher : IDisposable
     public event DevenvProcessDelegate? ProcessStarted;
     public event DevenvProcessDelegate? ProcessStopped;
 
-    public readonly Dictionary<int, HashedProcess> ActiveProcesses = [];
+    public readonly Dictionary<int, ProcessEntry> ActiveProcesses = [];
     readonly object locker = new();
 
-    void OnProcessStarted(ProcessEntry* process)
+    static ulong conhostHash = StringHasher.CalculateHash("conhost");
+    void OnProcessStarted(ProcessEntry process)
     {
         // Most likely, this is a start of a debug process, not a service, so we will not consider this process as a working one
-        if (process->Name == "conhost")
+        if (process.Hash == conhostHash)
             return;
 
-        HashedProcess? hashedProcess = null;    
-        lock (locker) 
-        {
-            if (!IsDevenvProcess(process))
-                return;
+        if (!IsDevenvProcess(process))
+            return;
 
-            var managedProcess = ProcessUtils.GetProcessByID(process->ID);
-            if (managedProcess is null)
-                return;
+         ActiveProcesses.Add(process.ID, process);
 
-            hashedProcess = new(managedProcess, *process);
-            ActiveProcesses.Add(process->ID, hashedProcess);
-        }
-
-        ProcessStarted?.Invoke(hashedProcess);
+        ProcessStarted?.Invoke(process);
     }
 
-    void OnProcessStopped(ProcessEntry* process)
+    void OnProcessStopped(ProcessEntry process)
     {
-        HashedProcess? hashedProcess = null;
-        lock (locker)
-        {
-            if (!IsDevenvProcess(process))
-                return;
+        var id = process.ID;
+        if (!ActiveProcesses.ContainsKey(id))
+            return;
 
-            if (!ActiveProcesses.ContainsKey(process->ID))
-                return;
+        ActiveProcesses.Remove(id);
 
-            hashedProcess = ActiveProcesses[process->ID];
-            ActiveProcesses.Remove(process->ID);
-        }
-
-        ProcessStopped?.Invoke(hashedProcess);
+        ProcessStopped?.Invoke(process);
     }
 
-    static int devenvProcessNameHash = HashedProcess.GetProcessNameHash("devenv");
-    bool IsDevenvProcess(ProcessEntry* process)
-        => process->Hash == devenvProcessNameHash || ActiveProcesses.ContainsKey(process->ParentID);
+    static ulong devenvProcessNameHash = StringHasher.CalculateHash("devenv");
+    bool IsDevenvProcess(ProcessEntry process)
+        => process.Hash == devenvProcessNameHash || ActiveProcesses.ContainsKey(process.ParentID);
 
     void RegisterEvents()
     {
@@ -78,6 +63,7 @@ unsafe class DevenvWatcher : IDisposable
         ProcessCollection.ProcessStopped -= OnProcessStopped;
     }
 
+    #region IDisposible
     bool disposed;
     public void Dispose()
     {
@@ -89,5 +75,5 @@ unsafe class DevenvWatcher : IDisposable
     }
 
     ~DevenvWatcher() => Dispose();
+    #endregion
 }
-#pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
