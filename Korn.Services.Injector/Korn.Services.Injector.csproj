@@ -18,6 +18,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Korn.AssemblyInjector\Korn.AssemblyInjector\Korn.AssemblyInjector.csproj" />
     <ProjectReference Include="..\..\Korn.Core\Korn.Core\Korn.Core.csproj" />
     <ProjectReference Include="..\..\Korn.Modules.Com\Korn.Modules.Com\Korn.Modules.Com.csproj" />
     <ProjectReference Include="..\..\Korn.Modules.Algorithms\Korn.Modules.Algorithms\Korn.Modules.Algorithms.csproj" />
