@@ -18,24 +18,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging.EventLog" Version="9.0.4" />
-    <PackageReference Include="System.Management" Version="9.0.4" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Korn.AssemblyInjector\Korn.AssemblyInjector\Korn.AssemblyInjector.csproj" />
     <ProjectReference Include="..\..\Korn.Core\Korn.Core\Korn.Core.csproj" />
-    <ProjectReference Include="..\..\Korn.Utils.Algorithms\Korn.Utils.Algorithms\Korn.Utils.Algorithms.csproj" />
+    <ProjectReference Include="..\..\Korn.Modules.Com\Korn.Modules.Com\Korn.Modules.Com.csproj" />
+    <ProjectReference Include="..\..\Korn.Modules.Algorithms\Korn.Modules.Algorithms\Korn.Modules.Algorithms.csproj" />
     <ProjectReference Include="..\..\Korn.Utils.Memory\Korn.Utils.Memory\Korn.Utils.Memory.csproj" />
     <ProjectReference Include="..\..\Korn.Utils.PDBResolver\Korn.Utils.PDBResolver\Korn.Utils.PDBResolver.csproj" />
     <ProjectReference Include="..\..\Korn.Utils.System\Korn.Utils.System\Korn.Utils.System.csproj" />
     <ProjectReference Include="..\..\Korn.Utils.VisualStudio\Korn.Utils.VisualStudio\Korn.Utils.VisualStudio.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-	  <Reference Include="System.Management">
-		  <HintPath>lib\System.Management.dll</HintPath>
-	  </Reference>
   </ItemGroup>
 
 </Project>

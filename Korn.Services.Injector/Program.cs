@@ -1,12 +1,12 @@
 ﻿using Korn;
+using Korn.Com.Wmi;
 using Korn.Utils;
-using System.Diagnostics;
 
 var logger = new KornLogger(Korn.Interface.InjectorService.LogFile);
-var crasher = new KornCrasher(logger);
-logger.WriteMessage($"Services.Injector({Process.GetCurrentProcess().Id}) started");
+var crasher = new KornCrashWatcher(logger);
+logger.WriteMessage($"Services.Injector({Process.Current.ID}) started");
 
-var net8ProcessHashes =
+var net8Processes =
 ((string[])
 [
     //"ServiceHub.Host.dotnet.x64",
@@ -15,60 +15,111 @@ var net8ProcessHashes =
     //"ServiceHub.IdentityHost",
     //"ServiceHub.VSDetouredHost",
     //"Microsoft.ServiceHub.Controller" 
-]).Select(StringHasher.CalculateHash).ToArray();
+]);
 
-var net472ProcessHashes =
+var net472Processes =
 ((string[])
 [
     //"ServiceHub.IntellicodeModelService", // unused
     "devenv",
     //"MSBuild", // not used
     "VBCSCompiler"
-]).Select(StringHasher.CalculateHash).ToArray();
+]);
 
-((string[])[/*"MSBuild", */"VBCSCompiler"]).ToList().ForEach(name => Process.GetProcessesByName(name).ToList().ForEach(p => p.Kill()));
+((string[])[/*"MSBuild", */"VBCSCompiler"]).ToList().ForEach(name => Process.Processes.GetProcessesByName(name).ForEach(p => p.Kill()));
 
 const string dllname = Korn.Interface.Bootstrapper.ExecutableFileName;
-//var dllnameFootprint = ExternalProcessModules.GetNameFootprint(dllname);
 
-using var processCollection = new ProcessCollection();
-using var processWatcher = new ProcessWatcher(processCollection);
-using var devenvWatcher = new DevenvWatcher(processWatcher);
+var processWatcher = new ProcessWatcher();
+var devenvWatcher = new DevenvWatcher(processWatcher);
 
-devenvWatcher.ProcessStarted += OnProcessStarted;
+devenvWatcher.ProcessStarted += OnProcessStartedWrapper;
+devenvWatcher.ProcessStopped += OnProcessStopped;
 
 Thread.Sleep(int.MaxValue);
 
-void OnProcessStarted(ProcessEntry entry)
+void OnProcessStartedWrapper(CreatedProcess entry)
 {
-    try
+    var processId = entry.ID;
+    var process = new Process(processId);
+
+    Task.Run(() =>
     {
-        var pid = entry.ID;
-        using var process = new ExternalProcessId(pid);
-        using var modules = process.Modules;
-
-        var isNet8 = net8ProcessHashes.Contains(entry.Hash);
-        var isNet472 = net472ProcessHashes.Contains(entry.Hash);
-
-        if (isNet8 || isNet472)
+        try
         {
-            var systime = Kernel32.GetSystemTime();
-            process.FastSuspendProcess();
-            logger.WriteLine($"suspended");
+            var isNet8 = net8Processes.Contains(entry.Name);
+            var isNet472 = net472Processes.Contains(entry.Name);
 
-            crasher.StartWatchProcess(pid);
-            using var injector = new AssemblyInjector(pid);
+            if (isNet8 || isNet472)
+                OnProcessStarted(process, isNet8);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
 
-            logger.WriteLine($"Injection in {entry.Name}({entry.ID})");
+        process.Dispose();
+    });
+}
 
-            if (isNet8)
-                injector.InjectInCoreClr(Path.Combine(Korn.Interface.Bootstrapper.BinNet8Directory, dllname));
-            else if (isNet472)
-                injector.InjectInClr(Path.Combine(Korn.Interface.Bootstrapper.BinNet472Directory, dllname));
+// it is has sence to add cache to clrResolver, but this will not be beneficial since it runs while the process is suspended
+void OnProcessStarted(Process process, bool isNet8)
+{
+    process.FastSuspend();
+    crasher.StartWatchProcess(process.ID);
+
+    var modules = process.Modules;
+    var clrModuleName = isNet8 ? "coreclr.dll" : "clr.dll";
+    if (!modules.ContainsModule(clrModuleName))
+    {
+        const int INITIALIZATION_TIMEOUT = 200 * 10000; // 200ms
+
+        var startTime = Kernel32.GetSystemTime();
+        process.FastResume();
+
+        do Task.Delay(1);
+        while (!modules.ContainsModule(clrModuleName) && (startTime - Kernel32.GetSystemTime()) < INITIALIZATION_TIMEOUT);
+
+        if (!modules.ContainsModule(clrModuleName))
+            logger.Error($"Services.Injector->OnProcessStarted: The process has not been initialized");
+
+        process.FastSuspend();
+    }
+
+    logger.WriteLine($"Injection in {process.Name}({process.ID})");
+    var injector = new AssemblyInjector(process);
+
+    if (isNet8)
+    {
+        var path = Path.Combine(Korn.Interface.Bootstrapper.BinNet8Directory, dllname);
+        injector.InjectInCoreClr(path);
+    }
+    else
+    {
+        var path = Path.Combine(Korn.Interface.Bootstrapper.BinNet472Directory, dllname);
+        injector.InjectInClr(path);
+    }    
+
+    // timeout. in case the main thread was loked, we will simply continue all threads after the timeout.
+    // in anyway it gives a profit, so it makes sense.
+    // lock can be either at the level of implementation of windows processes or in clr.
+    Task.Delay(300);
+    process.FastResume();
+}
+
+void OnProcessStopped(DestructedProcess stoppedProcessEntry)
+{
+    var stoppedProcessId = stoppedProcessEntry.ID;
+
+    var activeProcesses = devenvWatcher.ActiveProcesses.ToList();
+    for (var i = 0; i < activeProcesses.Count; i++)
+    {
+        var (pid, entry) = activeProcesses[i];
+        var parentId = entry.ParentID;
+        if (parentId == stoppedProcessId)
+        {
+            using var process = new Process(pid);
+            process.Kill();
         }
     }
-    catch (Exception ex) 
-    {
-        Console.WriteLine(ex);
-    }    
 }

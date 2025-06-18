@@ -19,13 +19,17 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Utils.PDBResolver", ".
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Utils.Memory", "..\Korn.Utils.Memory\Korn.Utils.Memory\Korn.Utils.Memory.csproj", "{8DA1363B-46E1-48AD-9C32-BF747E754BEF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Utils.Algorithms", "..\Korn.Utils.Algorithms\Korn.Utils.Algorithms\Korn.Utils.Algorithms.csproj", "{8FFB060D-4515-4CBF-BA16-AE1A5EA379F4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Modules.Algorithms", "..\Korn.Modules.Algorithms\Korn.Modules.Algorithms\Korn.Modules.Algorithms.csproj", "{8FFB060D-4515-4CBF-BA16-AE1A5EA379F4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Core", "..\Korn.Core\Korn.Core\Korn.Core.csproj", "{A381BAEA-8FC4-42C9-8431-34118D619FE0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Utils.Assembler", "..\Korn.Utils.Assembler\Korn.Utils.Assembler\Korn.Utils.Assembler.csproj", "{8D03DF18-35AE-44B4-8E9C-BEDEDC2ACC9B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Modules.Assembler", "..\Korn.Modules.Assembler\Korn.Modules.Assembler\Korn.Modules.Assembler.csproj", "{8D03DF18-35AE-44B4-8E9C-BEDEDC2ACC9B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Utils.Unsafe", "..\Korn.Utils.Unsafe\Korn.Utils.Unsafe\Korn.Utils.Unsafe.csproj", "{1C15958D-4775-4ACF-B674-6B1A4CB3C951}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Modules.Unsafe", "..\Korn.Modules.Unsafe\Korn.Modules.Unsafe\Korn.Modules.Unsafe.csproj", "{1C15958D-4775-4ACF-B674-6B1A4CB3C951}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Utils.Process", "..\Korn.Utils.Process\Korn.Utils.Process\Korn.Utils.Process.csproj", "{FCB00922-779C-4850-9989-8DD8B80C4620}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Korn.Modules.Com", "..\Korn.Modules.Com\Korn.Modules.Com\Korn.Modules.Com.csproj", "{01CF5C80-4801-4FBF-B606-A119DF164DDC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -54,6 +58,10 @@ Global
 		{8D03DF18-35AE-44B4-8E9C-BEDEDC2ACC9B}.Debug|x64.Build.0 = Debug|x64
 		{1C15958D-4775-4ACF-B674-6B1A4CB3C951}.Debug|x64.ActiveCfg = Debug|x64
 		{1C15958D-4775-4ACF-B674-6B1A4CB3C951}.Debug|x64.Build.0 = Debug|x64
+		{FCB00922-779C-4850-9989-8DD8B80C4620}.Debug|x64.ActiveCfg = Debug|x64
+		{FCB00922-779C-4850-9989-8DD8B80C4620}.Debug|x64.Build.0 = Debug|x64
+		{01CF5C80-4801-4FBF-B606-A119DF164DDC}.Debug|x64.ActiveCfg = Debug|x64
+		{01CF5C80-4801-4FBF-B606-A119DF164DDC}.Debug|x64.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -69,5 +77,7 @@ Global
 		{A381BAEA-8FC4-42C9-8431-34118D619FE0} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
 		{8D03DF18-35AE-44B4-8E9C-BEDEDC2ACC9B} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
 		{1C15958D-4775-4ACF-B674-6B1A4CB3C951} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
+		{FCB00922-779C-4850-9989-8DD8B80C4620} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
+		{01CF5C80-4801-4FBF-B606-A119DF164DDC} = {9DFDC333-2B0A-4221-816F-29321D5F46EA}
 	EndGlobalSection
 EndGlobal
