@@ -1,5 +1,7 @@
 ﻿using Korn;
-using Korn.Com.Wmi;
+using Korn.Logger;
+using Korn.Modules.Com.Wmi;
+using Korn.Modules.WinApi;
 using Korn.Utils;
 
 var logger = new KornLogger(Korn.Interface.InjectorService.LogFile);
